@@ -95,28 +95,6 @@ The platform follows:
 
 The MVP is intentionally designed as a modular monolith to support rapid delivery, maintainability, and future scalability.
 
-
-## High-Level Architecture
-React
-  │
-  ▼
-FastAPI Modular Monolith
-  │
-  ├── Customer
-  ├── KYC
-  ├── Screening
-  ├── Transaction Monitoring
-  ├── Risk Scoring
-  ├── Alerts
-  ├── Investigations
-  ├── Graph Intelligence
-  ├── Reporting
-  └── Identity & Access
-  │
-  ├── PostgreSQL
-  └── Neo4j
-
-
   ### Quick Start
   git clone <repo>
 
@@ -125,11 +103,17 @@ FastAPI Modular Monolith
   docker compose up -d
 
   cd backend
+  
   python -m venv .venv
+  
   source .venv/bin/activate
+  
   pip install -r requirements.txt
+  
   uvicorn app.main:app --reload
 
   cd frontend
+  
   npm install
+  
   npm run dev
