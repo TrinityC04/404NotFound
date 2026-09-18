@@ -95,25 +95,73 @@ The platform follows:
 
 The MVP is intentionally designed as a modular monolith to support rapid delivery, maintainability, and future scalability.
 
-  ### Quick Start
-  git clone <repo>
+5. Backend Setup
+Navigate to the backend directory:
 
-  cd aml-risk-platform
+cd backend
 
-  docker compose up -d
+Create a Python virtual environment: python -m venv .venv
 
-  cd backend
-  
-  python -m venv .venv
-  
-  source .venv/bin/activate
-  
-  pip install -r requirements.txt
-  
-  uvicorn app.main:app --reload
+Activate the virtual environment.
+Windows
+.venv\Scripts\activate
 
-  cd frontend
-  
-  npm install
-  
-  npm run dev
+Install the backend dependencies: pip install -r requirements.txt
+
+Start the FastAPI development server: uvicorn app.main:app --reload
+
+The backend should now be available at: http://localhost:8000
+FastAPI API documentation is available at: http://localhost:8000/docs
+
+6. Frontend Setup
+Open a new terminal and navigate to the frontend directory:
+
+cd frontend
+
+Install the frontend dependencies:
+npm install
+
+Start the development server:
+
+npm run dev
+
+The frontend will be available at the URL displayed by the development server.
+
+7. Running the Complete Application
+For local development, the recommended startup sequence is:
+
+Terminal 1 — Infrastructure
+From the project root:
+
+docker compose up -d
+
+Terminal 2 — Backend
+cd backend
+
+python -m venv .venv
+
+source .venv/bin/activate
+
+pip install -r requirements.txt
+
+uvicorn app.main:app --reload
+
+Terminal 3 — Frontend
+cd frontend
+
+npm install
+
+npm run dev
+
+The application should now be running with:
+
+Frontend
+   │
+   ├── Authentication ──► Keycloak
+   │
+   └── API Requests ────► FastAPI Backend
+                              │
+                              ├── Application Database
+                              │
+                              └── Neo4j
+
