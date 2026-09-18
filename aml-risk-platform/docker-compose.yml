@@ -1,0 +1,47 @@
+services:
+
+  postgres:
+    image: postgres:17
+    container_name: aml-postgres
+    environment:
+      POSTGRES_DB: aml
+      POSTGRES_USER: aml
+      POSTGRES_PASSWORD: aml_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  keycloak-db:
+    image: postgres:17
+    container_name: aml-keycloak-db
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: keycloak_password
+    volumes:
+      - keycloak_postgres_data:/var/lib/postgresql/data
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.7.4
+    container_name: aml-keycloak
+    command:
+      - start-dev
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin_password
+
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloak_password
+
+    ports:
+      - "8080:8080"
+
+    depends_on:
+      - keycloak-db
+
+volumes:
+  postgres_data:
+  keycloak_postgres_data:
