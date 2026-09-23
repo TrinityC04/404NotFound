@@ -119,7 +119,7 @@ Open a new terminal and navigate to the frontend directory:
 cd frontend
 
 Install the frontend dependencies:
-npm install
+npm install (Make sure you have Node.js installed before, verify using [node --version] command)
 
 Start the development server:
 
