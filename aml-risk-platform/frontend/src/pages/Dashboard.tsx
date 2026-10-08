@@ -35,9 +35,10 @@ import {
   YAxis,
 } from "recharts";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { NavLink, useNavigate } from "react-router-dom";
+import { getDashboardData, type DashboardResponse } from "../services/api";
 
 type NavItem = {
   label: string;
@@ -79,149 +80,18 @@ const navItems: NavItem[] = [
   },
 ];
 
-const kpis = [
-  {
-    label: "Total Customers",
-    value: "12,482",
-    change: "+6%",
-    positive: true,
-    icon: Users,
-    tone: "purple",
-    points: [14, 18, 15, 25, 22, 33, 30, 42],
-  },
-  {
-    label: "KYC Pending",
-    value: "342",
-    change: "+12%",
-    positive: false,
-    icon: FileCheck2,
-    tone: "pink",
-    points: [18, 16, 25, 20, 30, 27, 38, 44],
-  },
-  {
-    label: "Verified Customers",
-    value: "11,026",
-    change: "+8%",
-    positive: true,
-    icon: CircleCheck,
-    tone: "blue",
-    points: [18, 21, 19, 28, 31, 29, 37, 44],
-  },
-  {
-    label: "Requires Action",
-    value: "612",
-    change: "+4%",
-    positive: false,
-    icon: AlertTriangle,
-    tone: "amber",
-    points: [12, 15, 13, 17, 20, 18, 26, 33],
-  },
-];
+const kpiIcons: Record<string, LucideIcon> = {
+  "Total Customers": Users,
+  "KYC Pending": FileCheck2,
+  "Verified Customers": CircleCheck,
+  "Requires Action": AlertTriangle,
+};
 
-const activityRows = [
-  ["CUST-00483", "Thabo Mokoena", "Verified", "30 Sep 2026", "14:32"],
-  ["CUST-00721", "Lerato Dlamini", "Under Review", "30 Sep 2026", "11:17"],
-  ["CUST-00316", "Michael Jackson", "Requires Action", "29 Sep 2026", "16:45"],
-  ["CUST-00972", "Nomsa Khumalo", "Verified", "29 Sep 2026", "09:12"],
-  ["CUST-01123", "Jason Peterson", "Pending", "28 Sep 2026", "16:40"],
-];
-
-const verificationQueue = [
-  {
-    customer: "CUST-00483",
-    name: "Thabo Mokoena",
-    verification: "Identity verification",
-    priority: "High",
-    waiting: "2h ago",
-    icon: UserCheck,
-    tone: "red",
-  },
-  {
-    customer: "CUST-00721",
-    name: "Lerato Dlamini",
-    verification: "Proof of address",
-    priority: "High",
-    waiting: "4h ago",
-    icon: FileCheck2,
-    tone: "red",
-  },
-  {
-    customer: "CUST-00316",
-    name: "Michael Jackson",
-    verification: "Document review",
-    priority: "Medium",
-    waiting: "7h ago",
-    icon: FileSearch,
-    tone: "amber",
-  },
-  {
-    customer: "CUST-01123",
-    name: "Jason Peterson",
-    verification: "Enhanced due diligence",
-    priority: "Medium",
-    waiting: "1d ago",
-    icon: ShieldCheck,
-    tone: "amber",
-  },
-];
-
-const trendData = [
-  {
-    day: "1 Sep",
-    verified: 280,
-    pending: 180,
-    action: 82,
-    started: 55,
-  },
-  {
-    day: "5 Sep",
-    verified: 430,
-    pending: 235,
-    action: 105,
-    started: 80,
-  },
-  {
-    day: "10 Sep",
-    verified: 510,
-    pending: 250,
-    action: 98,
-    started: 92,
-  },
-  {
-    day: "15 Sep",
-    verified: 580,
-    pending: 310,
-    action: 125,
-    started: 108,
-  },
-  {
-    day: "20 Sep",
-    verified: 610,
-    pending: 300,
-    action: 150,
-    started: 120,
-  },
-  {
-    day: "25 Sep",
-    verified: 740,
-    pending: 370,
-    action: 178,
-    started: 128,
-  },
-  {
-    day: "30 Sep",
-    verified: 880,
-    pending: 480,
-    action: 250,
-    started: 142,
-  },
-];
-
-const documentTypes = [
-  ["ID Document", "95%", "bg-violet-500"],
-  ["Passport", "87%", "bg-indigo-500"],
-  ["Driver's License", "76%", "bg-amber-400"],
-  ["Proof of Address", "68%", "bg-pink-400"],
+const documentTypeColors = [
+  "bg-violet-500",
+  "bg-indigo-500",
+  "bg-amber-400",
+  "bg-pink-400",
 ];
 
 const cx = (...classes: Array<string | false | undefined>) =>
@@ -356,13 +226,26 @@ export function KycDashboard() {
   const [mobileNav, setMobileNav] = useState(false);
   const [query, setQuery] = useState("");
   const [period, setPeriod] = useState("Last 30 Days");
+  const [dashboardData, setDashboardData] = useState<DashboardResponse | null>(null);
+  const [apiError, setApiError] = useState("");
+
+  useEffect(() => {
+    getDashboardData()
+      .then(setDashboardData)
+      .catch((error: unknown) => {
+        setApiError(error instanceof Error ? error.message : "Unable to load dashboard data");
+      });
+  }, []);
 
   const filteredActivity = useMemo(
     () =>
-      activityRows.filter((row) =>
-        row.join(" ").toLowerCase().includes(query.toLowerCase()),
+      (dashboardData?.activity ?? []).filter((row) =>
+        [row.id, row.name, row.status, row.date, row.time]
+          .join(" ")
+          .toLowerCase()
+          .includes(query.toLowerCase()),
       ),
-    [query],
+    [dashboardData, query],
   );
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const navigate = useNavigate();
@@ -640,13 +523,18 @@ export function KycDashboard() {
                 </div>
               </div>
             </div>
+            {apiError && (
+              <p role="alert" className="text-sm text-red-600">
+                Dashboard API unavailable: {apiError}
+              </p>
+            )}
           </div>
 
           {/* KPI row */}
 
           <div className="mb-5 flex flex-wrap gap-4">
-            {kpis.map((item) => {
-              const Icon = item.icon;
+            {(dashboardData?.kpis ?? []).map((item) => {
+              const Icon = kpiIcons[item.label] ?? Gauge;
 
               const iconClass =
                 item.tone === "purple"
@@ -723,8 +611,14 @@ export function KycDashboard() {
               className="min-w-0 flex-[1.08]"
             >
               <div className="space-y-3 px-5 pb-5">
-                {verificationQueue.map((item) => {
-                  const Icon = item.icon;
+                {(dashboardData?.verification_queue ?? []).map((item) => {
+                  const Icon = item.verification.includes("Identity")
+                    ? UserCheck
+                    : item.verification.includes("address")
+                      ? FileCheck2
+                      : item.verification.includes("Enhanced")
+                        ? ShieldCheck
+                        : FileSearch;
 
                   const iconTone =
                     item.tone === "red"
@@ -823,22 +717,22 @@ export function KycDashboard() {
 
                   <tbody>
                     {filteredActivity.map((row) => (
-                      <tr key={row[0]} className="border-b border-slate-100">
+                      <tr key={row.id} className="border-b border-slate-100">
                         <td className="px-3 py-3 text-[11px] font-bold text-slate-800">
-                          {row[0]}
+                          {row.id}
                         </td>
 
                         <td className="px-3 py-3 text-[11px] text-slate-500">
-                          {row[1]}
+                          {row.name}
                         </td>
 
                         <td className="px-3 py-3">
-                          <StatusBadge status={row[2]} />
+                          <StatusBadge status={row.status} />
                         </td>
 
                         <td className="px-3 py-3 text-[10px] text-slate-400">
-                          <div>{row[3]}</div>
-                          <div>{row[4]}</div>
+                          <div>{row.date}</div>
+                          <div>{row.time}</div>
                         </td>
 
                         <td className="px-3 py-3 text-right">
@@ -852,7 +746,7 @@ export function KycDashboard() {
                           <button
                             type="button"
                             className="ml-3 text-slate-400 hover:text-slate-700"
-                            aria-label={`More options for ${row[0]}`}
+                            aria-label={`More options for ${row.id}`}
                           >
                             <MoreVertical size={15} />
                           </button>
@@ -880,7 +774,7 @@ export function KycDashboard() {
                 <div className="h-[275px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart
-                      data={trendData}
+                      data={dashboardData?.trend ?? []}
                       margin={{
                         top: 10,
                         right: 10,
@@ -983,7 +877,9 @@ export function KycDashboard() {
               className="min-w-0 flex-1"
             >
               <div className="space-y-5 px-5 pb-7 pt-3">
-                {documentTypes.map(([name, value, color], index) => (
+                {(dashboardData?.document_types ?? []).map(({ name, value }, index) => {
+                  const color = documentTypeColors[index] ?? "bg-slate-400";
+                  return (
                   <div key={name}>
                     <div className="mb-2 flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -1023,7 +919,8 @@ export function KycDashboard() {
                       />
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </Panel>
 

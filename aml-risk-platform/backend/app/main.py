@@ -1,14 +1,46 @@
-from fastapi import Depends, FastAPI
+import os
 
-from app.shared.auth.dependencies import (
-    get_current_user,
-    require_role,
-)
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.modules.customer.api.customer_router import router as customer_router
+from app.modules.identity_access.api.auth_router import router as auth_router
+from app.modules.kyc.api.kyc_router import router as kyc_router
+from app.modules.risk_scoring.api.risk_scoring_router import router as risk_scoring_router
+from app.modules.screening.api.screening_router import router as screening_router
+from app.modules.alerts.api.alerts_router import router as alerts_router
+from app.modules.investigations.api.investigations_router import router as investigations_router
+from app.modules.reporting.api.reporting_router import router as reporting_router
+from app.modules.transaction_monitoring.api.transaction_monitoring_router import router as transaction_monitoring_router
 
 app = FastAPI(
     title="AML Risk Intelligence Platform",
     version="0.1.0",
 )
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=os.getenv(
+        "FRONTEND_ORIGINS",
+        "http://localhost:5173,http://127.0.0.1:5173",
+    ).split(","),
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+for module_router in (
+    auth_router,
+    customer_router,
+    kyc_router,
+    screening_router,
+    alerts_router,
+    investigations_router,
+    reporting_router,
+    risk_scoring_router,
+    transaction_monitoring_router,
+):
+    app.include_router(module_router, prefix="/api/v1")
 
 @app.get("/")
 async def root():
@@ -22,24 +54,3 @@ async def health():
     return {
         "status": "healthy",
     }
-
-@app.get("/api/v1/auth/me")
-async def get_me(
-    current_user: dict = Depends(get_current_user),
-):
-    return {
-        "id": current_user.get("sub"),
-        "username": current_user.get("preferred_username"),
-        "email": current_user.get("email"),
-        "roles": current_user.get("realm_access", {}).get("roles", []),
-    }
-
-@app.get("/api/v1/admin-test")
-async def admin_test(
-    current_user: dict = Depends(require_role("admin")),
-):
-    return {
-        "message": "You have admin access",
-        "username": current_user.get("preferred_username"),
-    }
-
