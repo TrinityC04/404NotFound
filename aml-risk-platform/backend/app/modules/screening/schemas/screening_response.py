@@ -2,7 +2,10 @@ from pydantic import BaseModel
 
 
 class ScreeningResponse(BaseModel):
-    screening_type: str
-    result: str
-    match_found: bool
-    matched_entity: str | None = None
+    id: str
+    customer: str
+    customerId: str
+    source: str
+    status: str
+    score: str
+    time: str

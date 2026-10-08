@@ -41,12 +41,14 @@ import {
 } from "react-router-dom";
 
 import {
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
 
 import type { LucideIcon } from "lucide-react";
+import { getScreeningDashboard, type ScreeningDashboardResponse } from "../services/api";
 
 type NavItem = {
   label: string;
@@ -88,216 +90,33 @@ const navItems: NavItem[] = [
   },
 ];
 
-const screeningKpis = [
-  {
-    label: "Total Screened",
-    value: "18,642",
-    change: "+9.4%",
-    positive: true,
-    icon: ShieldCheck,
-    tone: "purple",
-  },
-  {
-    label: "Potential Matches",
-    value: "128",
-    change: "+16.8%",
-    positive: false,
-    icon: CircleAlert,
-    tone: "pink",
-  },
-  {
-    label: "Cleared",
-    value: "18,201",
-    change: "+8.9%",
-    positive: true,
-    icon: CheckCircle2,
-    tone: "blue",
-  },
-  {
-    label: "Escalated",
-    value: "74",
-    change: "+11.2%",
-    positive: false,
-    icon: AlertTriangle,
-    tone: "amber",
-  },
-];
+const screeningKpiIcons: Record<string, LucideIcon> = {
+  "Total Screened": ShieldCheck,
+  "Potential Matches": CircleAlert,
+  Cleared: CheckCircle2,
+  Escalated: AlertTriangle,
+};
 
-const screeningTrend = [
-  {
-    day: "1 Sep",
-    screened: 2100,
-    matches: 32,
-  },
-  {
-    day: "5 Sep",
-    screened: 2700,
-    matches: 41,
-  },
-  {
-    day: "10 Sep",
-    screened: 3100,
-    matches: 38,
-  },
-  {
-    day: "15 Sep",
-    screened: 3550,
-    matches: 52,
-  },
-  {
-    day: "20 Sep",
-    screened: 4020,
-    matches: 47,
-  },
-  {
-    day: "25 Sep",
-    screened: 4620,
-    matches: 61,
-  },
-  {
-    day: "30 Sep",
-    screened: 5240,
-    matches: 68,
-  },
-];
+const breakdownColors: Record<string, string> = {
+  "No Match": "#14b8a6",
+  "Potential Match": "#f59e0b",
+  "Confirmed Match": "#ef4444",
+  "Under Review": "#8b5cf6",
+};
 
-const matchBreakdown = [
-  {
-    name: "No Match",
-    value: 18201,
-    color: "#14b8a6",
-  },
-  {
-    name: "Potential Match",
-    value: 128,
-    color: "#f59e0b",
-  },
-  {
-    name: "Confirmed Match",
-    value: 74,
-    color: "#ef4444",
-  },
-  {
-    name: "Under Review",
-    value: 239,
-    color: "#8b5cf6",
-  },
-];
+const sourcePresentation: Record<string, { icon: LucideIcon; color: string; iconColor: string }> = {
+  Sanctions: { icon: ShieldAlert, color: "bg-red-500", iconColor: "bg-red-50 text-red-500" },
+  PEP: { icon: Users, color: "bg-amber-400", iconColor: "bg-amber-50 text-amber-500" },
+  "Adverse Media": { icon: FileSearch, color: "bg-violet-500", iconColor: "bg-violet-50 text-violet-600" },
+  "Law Enforcement": { icon: ShieldCheck, color: "bg-indigo-500", iconColor: "bg-indigo-50 text-indigo-600" },
+  "Other Watchlists": { icon: AlertTriangle, color: "bg-pink-500", iconColor: "bg-pink-50 text-pink-500" },
+};
 
-const watchlistSources = [
-  {
-    name: "Sanctions",
-    matches: 42,
-    percentage: 82,
-    icon: ShieldAlert,
-    color: "bg-red-500",
-    iconColor: "bg-red-50 text-red-500",
-  },
-  {
-    name: "PEP",
-    matches: 31,
-    percentage: 67,
-    icon: Users,
-    color: "bg-amber-400",
-    iconColor: "bg-amber-50 text-amber-500",
-  },
-  {
-    name: "Adverse Media",
-    matches: 28,
-    percentage: 58,
-    icon: FileSearch,
-    color: "bg-violet-500",
-    iconColor: "bg-violet-50 text-violet-600",
-  },
-  {
-    name: "Law Enforcement",
-    matches: 15,
-    percentage: 41,
-    icon: ShieldCheck,
-    color: "bg-indigo-500",
-    iconColor: "bg-indigo-50 text-indigo-600",
-  },
-  {
-    name: "Other Watchlists",
-    matches: 12,
-    percentage: 32,
-    icon: AlertTriangle,
-    color: "bg-pink-500",
-    iconColor: "bg-pink-50 text-pink-500",
-  },
-];
-
-const screeningResults = [
-  {
-    id: "SCR-008421",
-    customer: "Thabo Mokoena",
-    customerId: "CUST-00483",
-    source: "Sanctions",
-    status: "Clear",
-    score: "2%",
-    time: "12 min ago",
-  },
-  {
-    id: "SCR-008420",
-    customer: "Lerato Dlamini",
-    customerId: "CUST-00721",
-    source: "PEP",
-    status: "Potential Match",
-    score: "78%",
-    time: "24 min ago",
-  },
-  {
-    id: "SCR-008419",
-    customer: "Michael Jackson",
-    customerId: "CUST-00316",
-    source: "Adverse Media",
-    status: "Escalated",
-    score: "91%",
-    time: "42 min ago",
-  },
-  {
-    id: "SCR-008418",
-    customer: "Nomsa Khumalo",
-    customerId: "CUST-00972",
-    source: "Sanctions",
-    status: "Clear",
-    score: "4%",
-    time: "1h ago",
-  },
-  {
-    id: "SCR-008417",
-    customer: "Jason Peterson",
-    customerId: "CUST-01123",
-    source: "PEP",
-    status: "Under Review",
-    score: "64%",
-    time: "2h ago",
-  },
-];
-
-const screeningQueue = [
-  {
-    title: "Potential sanctions match",
-    detail: "3 customers require manual review",
-    priority: "High",
-    icon: ShieldAlert,
-    tone: "red",
-  },
-  {
-    title: "PEP matches detected",
-    detail: "5 profiles require enhanced screening",
-    priority: "Medium",
-    icon: UserCheck,
-    tone: "amber",
-  },
-  {
-    title: "Adverse media review",
-    detail: "7 customer profiles require investigation",
-    priority: "Medium",
-    icon: FileSearch,
-    tone: "purple",
-  },
-];
+const screeningQueueIcons: Record<string, LucideIcon> = {
+  "Potential sanctions match": ShieldAlert,
+  "PEP matches detected": UserCheck,
+  "Adverse media review": FileSearch,
+};
 
 const cx = (
   ...classes: Array<string | false | undefined>
@@ -539,10 +358,20 @@ export function ScreeningDashboard() {
   const [query, setQuery] = useState("");
   const [period, setPeriod] =
     useState("Last 30 Days");
+  const [screeningData, setScreeningData] = useState<ScreeningDashboardResponse | null>(null);
+  const [apiError, setApiError] = useState("");
+
+  useEffect(() => {
+    getScreeningDashboard()
+      .then(setScreeningData)
+      .catch((error: unknown) => {
+        setApiError(error instanceof Error ? error.message : "Unable to load screening results");
+      });
+  }, []);
 
   const filteredResults = useMemo(
   () =>
-    screeningResults.filter((row) =>
+    (screeningData?.results ?? []).filter((row) =>
       [
         row.id,
         row.customer,
@@ -556,7 +385,7 @@ export function ScreeningDashboard() {
         .toLowerCase()
         .includes(query.toLowerCase()),
     ),
-  [query],
+  [query, screeningData],
 );
 
   return (
@@ -698,13 +527,18 @@ export function ScreeningDashboard() {
                 </p>
               </div>
             </div>
+            {apiError && (
+              <p role="alert" className="mt-3 text-sm text-red-600">
+                Screening API unavailable: {apiError}
+              </p>
+            )}
           </div>
 
           {/* KPI Cards */}
 
           <div className="mb-5 flex flex-wrap gap-4">
-            {screeningKpis.map((item) => {
-              const Icon = item.icon;
+            {(screeningData?.kpis ?? []).map((item) => {
+              const Icon = screeningKpiIcons[item.label] ?? ShieldCheck;
 
               const iconClass =
                 item.tone === "purple"
@@ -789,7 +623,7 @@ export function ScreeningDashboard() {
                     height="100%"
                   >
                     <AreaChart
-                      data={screeningTrend}
+                      data={screeningData?.trend ?? []}
                       margin={{
                         top: 10,
                         right: 10,
@@ -918,7 +752,10 @@ export function ScreeningDashboard() {
                   >
                     <PieChart>
                       <Pie
-                        data={matchBreakdown}
+                        data={(screeningData?.breakdown ?? []).map((item) => ({
+                          ...item,
+                          color: breakdownColors[item.name] ?? "#94a3b8",
+                        }))}
                         dataKey="value"
                         nameKey="name"
                         cx="50%"
@@ -928,11 +765,11 @@ export function ScreeningDashboard() {
                         paddingAngle={3}
                         stroke="none"
                       >
-                        {matchBreakdown.map(
+                        {(screeningData?.breakdown ?? []).map(
                           (entry) => (
                             <Cell
                               key={entry.name}
-                              fill={entry.color}
+                              fill={breakdownColors[entry.name] ?? "#94a3b8"}
                             />
                           ),
                         )}
@@ -951,7 +788,7 @@ export function ScreeningDashboard() {
                 </div>
 
                 <div className="w-full space-y-4 sm:w-[48%]">
-                  {matchBreakdown.map(
+                  {(screeningData?.breakdown ?? []).map(
                     (item) => (
                       <div
                         key={item.name}
@@ -962,7 +799,7 @@ export function ScreeningDashboard() {
                             className="h-2.5 w-2.5 rounded-full"
                             style={{
                               backgroundColor:
-                                item.color,
+                                breakdownColors[item.name] ?? "#94a3b8",
                             }}
                           />
 
@@ -993,9 +830,10 @@ export function ScreeningDashboard() {
               className="min-w-0 flex-[0.75]"
             >
               <div className="space-y-4 px-5 pb-5">
-                {watchlistSources.map(
+                {(screeningData?.sources ?? []).map(
                   (item) => {
-                    const Icon = item.icon;
+                    const presentation = sourcePresentation[item.name];
+                    const Icon = presentation?.icon ?? ShieldCheck;
 
                     return (
                       <div key={item.name}>
@@ -1004,7 +842,7 @@ export function ScreeningDashboard() {
                             <span
                               className={cx(
                                 "flex h-8 w-8 items-center justify-center rounded-lg",
-                                item.iconColor,
+                                presentation?.iconColor,
                               )}
                             >
                               <Icon size={15} />
@@ -1024,7 +862,7 @@ export function ScreeningDashboard() {
                           <div
                             className={cx(
                               "h-full rounded-full",
-                              item.color,
+                              presentation?.color,
                             )}
                             style={{
                               width: `${item.percentage}%`,
@@ -1173,9 +1011,9 @@ export function ScreeningDashboard() {
               className="min-w-0 flex-[1.1]"
             >
               <div className="space-y-3 px-5 pb-5">
-                {screeningQueue.map(
+                {(screeningData?.queue ?? []).map(
                   (item) => {
-                    const Icon = item.icon;
+                    const Icon = screeningQueueIcons[item.title] ?? AlertTriangle;
 
                     const iconTone =
                       item.tone === "red"
